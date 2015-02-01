@@ -59,72 +59,36 @@ public class GeofenceTransitionsIntentService extends IntentService {
         }
 
         // Get the transition type.
-        int geofenceTransition = geofencingEvent.getGeofenceTransition();
+        int transitionType = geofencingEvent.getGeofenceTransition();
 
         // Test that the reported transition was of interest.
-        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER ||
-                geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
+        if (transitionType == Geofence.GEOFENCE_TRANSITION_ENTER ||
+                transitionType == Geofence.GEOFENCE_TRANSITION_EXIT) {
 
             // Get the geofences that were triggered. A single event can trigger multiple geofences.
             List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
 
-            // Get the transition details as a String.
-            String geofenceTransitionDetails = getGeofenceTransitionDetails(
-                    this,
-                    geofenceTransition,
-                    triggeringGeofences
-            );
-
-            // Send notification and log the transition details.
-            doSomethingWithThis(geofenceTransitionDetails);
-            Log.i(TAG, geofenceTransitionDetails);
+            doSomethingWithThis(transitionType, triggeringGeofences);
         } else {
-            // Log the error.
-
+            // handle error
         }
     }
 
-    /**
-     * Gets transition details and returns them as a formatted string.
-     *
-     * @param context               The app context.
-     * @param geofenceTransition    The ID of the geofence transition.
-     * @param triggeringGeofences   The geofence(s) triggered.
-     * @return                      The transition details formatted as String.
-     */
-    private String getGeofenceTransitionDetails(
-            Context context,
-            int geofenceTransition,
-            List<Geofence> triggeringGeofences) {
-
-        String geofenceTransitionString = getTransitionString(geofenceTransition);
-
-        // Get the Ids of each geofence that was triggered.
-        ArrayList triggeringGeofencesIdsList = new ArrayList();
-        for (Geofence geofence : triggeringGeofences) {
-            triggeringGeofencesIdsList.add(geofence.getRequestId());
-        }
-        String triggeringGeofencesIdsString = TextUtils.join(", ",  triggeringGeofencesIdsList);
-
-        return geofenceTransitionString + ": " + triggeringGeofencesIdsString;
-    }
-
-    private void doSomethingWithThis(String geofenceTransitionDetails) {
-        //TODO: Play music or something.
+    private void doSomethingWithThis(int transitionType, List<Geofence> triggers) {
+        // get a geofence, find the Zone or Playlist object associated with it via some sort of db
+        Log.d(TAG, getString(transitionType, triggers));
+        MainActivity.startPlaylist("Party Playlist");
     }
 
     /**
-     * Maps geofence transition types to their human-readable equivalents.
-     *
-     * @param transitionType    A transition type constant defined in Geofence
-     * @return                  A String indicating the type of transition
+     * Maps geofence transitions to their human-readable equivalents.
      */
-    private String getTransitionString(int transitionType) {
+    private String getString(int transitionType, List<Geofence> triggers) {
         switch (transitionType) {
             case Geofence.GEOFENCE_TRANSITION_ENTER:
-                return "Entered region";
+                return "Entered region " + triggers.get(0).getRequestId();
             case Geofence.GEOFENCE_TRANSITION_EXIT:
-                return "Exited region";
+                return "Exited region " + triggers.get(0).getRequestId();
             default:
                 return "What happened? I'm lost.";
         }
