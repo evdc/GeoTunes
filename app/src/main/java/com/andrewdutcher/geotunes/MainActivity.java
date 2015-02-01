@@ -60,6 +60,8 @@ public class MainActivity extends Activity implements
     private Button mRecordingButton;
     private TouchOverlayView mOverlayView;
 
+    private GeofenceRequester mGeofenceRequester;
+
     private boolean isRecording = false;;
 
     @Override
@@ -76,6 +78,8 @@ public class MainActivity extends Activity implements
         this.mOverlayView = (TouchOverlayView) (findViewById(R.id.touchOverlay));
 
         this.buildGoogleApiClient();
+
+        this.mGeofenceRequester = new GeofenceRequester(this, mGoogleApiClient);
 
         MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.mapFragment);
         mapFragment.getMapAsync(this);
@@ -276,7 +280,7 @@ public class MainActivity extends Activity implements
                         Circle circle = mGoogleMap.addCircle(new CircleOptions().center(origin).radius(results[0]));
 
                         // Bind the circles to Geofences!
-                        
+                        mGeofenceRequester.addGeofence(origin, results[0]);
                     }
                 }
 
@@ -295,19 +299,4 @@ public class MainActivity extends Activity implements
         mOverlayView.setEnabled(true);
     }
 
-    //private GeofenceRe
-    private void createGeofence(LatLng origin, float radius) {
-        Geofence geofence;
-
-        geofence = new Geofence.Builder().setRequestId("id?")
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
-                .setCircularRegion(origin.latitude, origin.longitude, radius)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE).build();
-
-        try {
-      //      mGeofenceRequester.addGeofences(mCurrentGeofences);
-        } catch (UnsupportedOperationException e) {
-            // Handle that previous request hasn't finished.
-        }
-    }
 }
