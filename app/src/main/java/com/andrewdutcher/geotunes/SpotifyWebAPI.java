@@ -1,6 +1,5 @@
 package com.andrewdutcher.geotunes;
 
-
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -11,6 +10,7 @@ import kaaes.spotify.webapi.android.models.Pager;
 import kaaes.spotify.webapi.android.models.Playlist;
 import kaaes.spotify.webapi.android.models.PlaylistTrack;
 import kaaes.spotify.webapi.android.models.Track;
+import kaaes.spotify.webapi.android.models.TracksPager;
 import kaaes.spotify.webapi.android.models.User;
 import retrofit.Callback;
 import retrofit.RetrofitError;
@@ -27,74 +27,55 @@ public class SpotifyWebAPI {
 
         SpotifyApi api = new SpotifyApi();
         spotify = api.setAccessToken(accessToken).getService();
-
-        getUserID();    // has side effect of setting this.userID
     }
 
-    // Get the User ID of the logged-in user.
-    public void getUserID() {
-        //return spotify.getMe().id;
-
+    // Get a List of all Playlists for the user.
+    // Note: the getPlaylists call is wrapped in getMe to *ensure* userID exists at the right time,
+    // because that shit kept failing previously. Callbacks on callbacks on callbacks.
+    public void getUserPlaylists(final Callback<List<Playlist>> callback) { // Added a callback argument\
         spotify.getMe(new Callback<User>() {
             @Override
             public void success(User user, Response response) {
-                Log.d("Get user ID success", user.id);
                 userID = user.id;
-            }
+                spotify.getPlaylists(userID, new Callback<Pager<Playlist>>() {
+                    @Override
+                    public void success(Pager<Playlist> playlists, Response response) {
+                        Log.d("Get user playlists success", playlists.href);
+                        callback.success(playlists.items, response);
+                    }
 
+                    @Override
+                    public void failure(RetrofitError error) {
+                        Log.d("Get playlists failure", error.toString());
+                        callback.failure(error);
+                    }
+                });
+            }
             @Override
-            public void failure(RetrofitError error) {
-                Log.d("Get user ID failure", error.toString());
+            public void failure(RetrofitError retrofitError) {
+                Log.e("SpotifyWebAPI", retrofitError.toString());
             }
         });
     }
 
-    // Get a List of all Playlists for the user.
-    private List<Playlist> mPlaylists= new ArrayList<Playlist>();
-    public void getUserPlaylists(final Callback<List<Playlist>> callback) {
-        //return spotify.getPlaylists(userID).items;
-
-        if(mPlaylists.isEmpty()) {
-            Log.d("SpotifyWebAPI", "Playlists is empty. Fetching.");
-            spotify.getPlaylists("evdc", new Callback<Pager<Playlist>>() {
-                @Override
-                public void success(Pager<Playlist> playlists, Response response) {
-                    Log.d("Get user playlists success", playlists.href);
-                    mPlaylists = playlists.items;
-                    callback.success(mPlaylists, response);
+    //Get a List of all Tracks in a Playlist.
+    public void getPlaylistTracks(Playlist playlist, final Callback<List<Track>> callback) {
+        final List<Track> tracks = new ArrayList<Track>();
+        spotify.getPlaylistTracks(userID, playlist.id, new Callback<Pager<PlaylistTrack>>() {
+            @Override
+            public void success(Pager<PlaylistTrack> playlistTrackPager, Response response) {
+                if(playlistTrackPager != null && playlistTrackPager.items != null) {
+                    for(PlaylistTrack item : playlistTrackPager.items) {
+                        tracks.add(item.track);
+                    }
+                    callback.success(tracks, null);
                 }
+            }
 
-                @Override
-                public void failure(RetrofitError error) {
-                    Log.d("Get playlists failure", error.toString());
-                    callback.failure(error);
-                }
-            });
-        } else {
-            callback.success(mPlaylists, null);
-        }
-    }
+            @Override
+            public void failure(RetrofitError retrofitError) {
 
-    // Get a List of Spotify IDs (as strings) of the tracks of a given playlist.
-    // Is it better to get these from the Playlist object, or make another spotify request?
-    public List<String> getPlaylistTrackIDs(Playlist playlist) {
-
-        Log.d("SpotifyWebApi", "Getting Track IDs for Playlist: " + playlist.name);
-        List<String> track_ids = new ArrayList<String>();
-
-        Pager<PlaylistTrack> tracksPager = playlist.tracks;
-        Log.d("SpotifyWebAPI", "Brace for null...");
-        Log.d("SpotifyWebAPI", "Pager is " + tracksPager.toString());
-        //tracksPager.
-        Log.d("SpotifyWebAPI", "Pager items is " + tracksPager.items.toString());
-
-
-
-        for(PlaylistTrack playlistTrack : tracksPager.items) {
-            Track track = playlistTrack.track;
-            String track_id = track.id;     // This is the Spotify ID for the track
-            track_ids.add(track_id);
-        }
-        return track_ids;
+            }
+        });
     }
 }

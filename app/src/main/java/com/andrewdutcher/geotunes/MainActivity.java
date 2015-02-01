@@ -1,5 +1,6 @@
 package com.andrewdutcher.geotunes;
 
+import android.graphics.Point;
 import android.location.Location;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -21,6 +22,7 @@ import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -46,12 +48,12 @@ public class MainActivity extends Activity implements
 
     private static final String CLIENT_ID = "54d4b45fd6604dd3952c0f0f3d0c5530";
     private static final String REDIRECT_URI = "geotunes-login://callback";
-
     private Player mPlayer;
     private SpotifyWebAPI spotifyWebAPI;
+    private List<Playlist> userPlaylists;
+
     private GoogleApiClient mGoogleApiClient;
     private Location mLastLocation;
-
     private TextView mLatitudeText;
     private TextView mLongitudeText;
     private GoogleMap mGoogleMap = null;
@@ -61,10 +63,13 @@ public class MainActivity extends Activity implements
     private boolean isRecording = false;;
 
     @Override
-    // Authenticate the user with Spotify.
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        SpotifyAuthentication.openAuthWindow(CLIENT_ID, "token", REDIRECT_URI,
+                new String[]{"user-read-private", "playlist-read-private", "streaming"}, null, this);
+
         this.mLatitudeText = (TextView) findViewById(R.id.latitudeText);
         this.mLongitudeText = (TextView) findViewById(R.id.longitudeText);
         this.mRecordingButton = (Button) findViewById(R.id.recordingButton);
@@ -76,7 +81,7 @@ public class MainActivity extends Activity implements
         mapFragment.getMapAsync(this);
         //mapFragment.getView().setVisibility(View.INVISIBLE);
         //SpotifyAuthentication.openAuthWindow(CLIENT_ID, "token", REDIRECT_URI,
-         //       new String[]{"user-read-private", "playlist-read-private", "streaming"}, null, this);
+        //       new String[]{"user-read-private", "playlist-read-private", "streaming"}, null, this);
     }
 
     protected synchronized void buildGoogleApiClient() {
@@ -94,7 +99,6 @@ public class MainActivity extends Activity implements
         super.onNewIntent(intent);
         Uri uri = intent.getData();
         setupSpotify(uri);
-        //playPlaylist(0);    // Just use the first playlist for testing
     }
 
     @Override
@@ -154,8 +158,6 @@ public class MainActivity extends Activity implements
                 public void onInitialized(Player player) {
                     mPlayer.addConnectionStateCallback(MainActivity.this);
                     mPlayer.addPlayerNotificationCallback(MainActivity.this);
-                    //mPlayer.play("spotify:track:2TpxZ7JUBn3uw46aR7qd6V");
-                    playPlaylist(0);
                 }
 
                 @Override
@@ -163,35 +165,32 @@ public class MainActivity extends Activity implements
                     Log.e("MainActivity", "Could not initialize player: " + throwable.getMessage());
                 }
             });
-
-            // This object will handle making requests to the Web API
-            // (for playlists, tracks and all)
         }
     }
 
-    // Use the Web API to request a list of Spotify IDs, as strings,
-    // from a playlist. Then add them all to the player queue.
-    private void playPlaylist(final int id) {
-        this.spotifyWebAPI.getUserPlaylists(new Callback<List<Playlist>>() {
+    // Start playing a playlist by name.
+    // Nested callbacks ensure that things execute in the correct order.
+    private void startPlaylist(final String name) {
+        spotifyWebAPI.getUserPlaylists(new Callback<List<Playlist>>() {
             @Override
             public void success(List<Playlist> playlists, Response response) {
-                Log.d("MainActiviy", "Got " + playlists.size() + " playlists");
-                Playlist playlist = playlists.get(id);
-                List<String> track_ids = spotifyWebAPI.getPlaylistTrackIDs(playlist);
-                Log.d("MainActivity", "Track ids dump:");
-                for (String trackId : track_ids) {
-                    Log.d("MainActivity", trackId);
+                mPlayer.clearQueue(); // Clear the existing play queue first
+                userPlaylists = playlists;
+                Playlist toPlay = new Playlist();
+                for(Playlist pl : userPlaylists) {
+                    if(pl.name.equals(name)) { toPlay = pl; }
                 }
-                Log.d("MainActivity", "End Track ids dump");
-                mPlayer.play(track_ids);
+                if(toPlay == null || toPlay.id == null) {
+                    Log.e("MainActivity", "Playlist "+name+" not found.");
+                }
+                else {
+                    mPlayer.play("spotify:user:"+toPlay.owner.id+":playlist:"+toPlay.id);
+                }
             }
 
             @Override
-            public void failure(RetrofitError retrofitError) {
-
-            }
+            public void failure(RetrofitError retrofitError) { }
         });
-
     }
 
     @Override
@@ -237,7 +236,7 @@ public class MainActivity extends Activity implements
         mGoogleMap.setMyLocationEnabled(true);
     }
 
-    public void recordingButtonClick(View view) {
+    public void recordingButtonClick(final View view) {
         if (isRecording) {
             isRecording = false;
             mRecordingButton.setText(R.string.drawCirle);
@@ -251,33 +250,38 @@ public class MainActivity extends Activity implements
                 mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(hereNow, 19));
             }*/
             mOverlayView.registerCallback(new TouchOverlayView.TouchCallback() {
-                private double startx;
-                private double starty;
-                private double endx;
-                private double endy;
-                public void onTouchDown(double x, double y) {
-                    startx = x;
-                    starty = y;
-                }
-
-                public void onTouchMove(double x, double y) {
-                    endx = x;
-                    endy = y;
-                }
+                private boolean drawing = false;
+                private LatLng origin, end;
 
                 public void onTouchUp(double x, double y) {
-                    endx = x;
-                    endy = y;
-                    mOverlayView.unregisterCallback();
-                    mOverlayView.setCaptureEnabled(false);
-                    isRecording = false;
-                    mRecordingButton.setText(R.string.drawCirle);
-                    double dx = endx - startx;
-                    double dy = endy - starty;
-                    ((TextView) findViewById(R.id.textView)).setText("You dragged this many pixels: " + String.valueOf(Math.sqrt(dx*dx + dy*dy)));
 
-                    // TODO: Take this pixel value, use the map's projection property to find out the lat/long of it, and render it as a circle.
+                    if(!drawing) {
+                        origin = mGoogleMap.getProjection().fromScreenLocation(new Point((int)x, (int)y));
+                        drawing = true;
+                        mRecordingButton.setText(R.string.stopDrawing);
+                        mGoogleMap.addMarker(new MarkerOptions().position(origin).title("Origin"));
+                    }
+                    else {
+                        end = mGoogleMap.getProjection().fromScreenLocation(new Point((int)x, (int)y));
+                        drawing = false;
+                        isRecording = false;    //also stop listening for touches
+                        mOverlayView.unregisterCallback();
+                        mOverlayView.setCaptureEnabled(false);
+                        mRecordingButton.setText(R.string.drawCirle);
+
+                        float[] results = new float[1]; // because distanceBetween has weird requirements
+                        Location.distanceBetween(origin.latitude, origin.longitude, end.latitude, end.longitude, results); // it puts the result in results[0] because reasons
+                        //mGoogleMap.addMarker(new MarkerOptions().position(origin).title("Origin"));
+                        mGoogleMap.addMarker(new MarkerOptions().position(end).title("End"));
+                        Circle circle = mGoogleMap.addCircle(new CircleOptions().center(origin).radius(results[0]));
+
+                        // Bind the circles to Geofences!
+                        
+                    }
                 }
+
+                public void onTouchDown(double x, double y) {}
+                public void onTouchMove(double x, double y) {}
 
                 public void onTouchCancel() {
                     mOverlayView.unregisterCallback();
@@ -289,5 +293,21 @@ public class MainActivity extends Activity implements
         }
         mOverlayView.setCaptureEnabled(isRecording);
         mOverlayView.setEnabled(true);
+    }
+
+    //private GeofenceRe
+    private void createGeofence(LatLng origin, float radius) {
+        Geofence geofence;
+
+        geofence = new Geofence.Builder().setRequestId("id?")
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .setCircularRegion(origin.latitude, origin.longitude, radius)
+                .setExpirationDuration(Geofence.NEVER_EXPIRE).build();
+
+        try {
+      //      mGeofenceRequester.addGeofences(mCurrentGeofences);
+        } catch (UnsupportedOperationException e) {
+            // Handle that previous request hasn't finished.
+        }
     }
 }
