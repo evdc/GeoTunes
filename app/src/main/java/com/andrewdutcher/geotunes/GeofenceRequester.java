@@ -106,6 +106,7 @@ public class GeofenceRequester implements ResultCallback<Status> {
      *               removeGeofences() get called.
      */
     public void onResult(Status status) {
+
         if (status.isSuccess()) {
             Log.d(TAG, "It worked?");
         } else {

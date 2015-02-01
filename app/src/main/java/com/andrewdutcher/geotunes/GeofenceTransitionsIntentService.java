@@ -11,6 +11,7 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingEvent;
@@ -110,7 +111,8 @@ public class GeofenceTransitionsIntentService extends IntentService {
     }
 
     private void doSomethingWithThis(String geofenceTransitionDetails) {
-        //TODO: Play music or something.
+        Context context = getApplicationContext();
+        Toast.makeText(context, geofenceTransitionDetails, Toast.LENGTH_LONG);
     }
 
     /**

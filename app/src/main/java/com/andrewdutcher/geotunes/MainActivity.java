@@ -62,7 +62,8 @@ public class MainActivity extends Activity implements
 
     private GeofenceRequester mGeofenceRequester;
 
-    private boolean isRecording = false;;
+    private boolean isRecording = false;
+    private boolean hasIntializedCenter = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -206,6 +207,7 @@ public class MainActivity extends Activity implements
     public void onConnected(Bundle connectionHint) {
         this.onLocationChanged(LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient));
 
+
         LocationRequest mLocationRequest = new LocationRequest();
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         mLocationRequest.setInterval(5*1000);
@@ -219,6 +221,11 @@ public class MainActivity extends Activity implements
 
     @Override
     public void onLocationChanged(Location location) {
+        if (!hasIntializedCenter && mGoogleMap != null) {
+            hasIntializedCenter = true;
+            LatLng hereNow = new LatLng(location.getLatitude(), location.getLongitude());
+            mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(hereNow, 19));
+        }
         if (location != null) {
             mLastLocation = location;
             mLatitudeText.setText(String.valueOf(mLastLocation.getLatitude()));
@@ -238,6 +245,11 @@ public class MainActivity extends Activity implements
     public void onMapReady(GoogleMap googleMap) {
         mGoogleMap = googleMap;
         mGoogleMap.setMyLocationEnabled(true);
+        if (!hasIntializedCenter && mLastLocation != null) {
+            hasIntializedCenter = true;
+            LatLng hereNow = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+            mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(hereNow, 19));
+        }
     }
 
     public void recordingButtonClick(final View view) {

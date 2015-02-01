@@ -1,0 +1,139 @@
+ public void recordingButtonClick(final View view) {
+        if (isRecording) {
+            isRecording = false;
+            mRecordingButton.setText(R.string.drawCirle);
+            mOverlayView.unregisterCallback();
+        } else {
+            isRecording = true;
+            mRecordingButton.setText(R.string.stopDrawing);
+            /*if (mGoogleMap != null && mLastLocation != null) {
+                mGoogleMap.clear();
+                LatLng hereNow = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+                mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(hereNow, 19));
+            }*/
+            mOverlayView.registerCallback(new TouchOverlayView.TouchCallback() {
+                private boolean drawing = false;
+                private LatLng origin, end;
+
+                public void onTouchUp(double x, double y) {
+
+                    if(!drawing) {
+                        origin = mGoogleMap.getProjection().fromScreenLocation(new Point((int)x, (int)y));
+                        drawing = true;
+                        mRecordingButton.setText(R.string.stopDrawing);
+                        mGoogleMap.addMarker(new MarkerOptions().position(origin).title("Origin"));
+                    }
+                    else {
+                        end = mGoogleMap.getProjection().fromScreenLocation(new Point((int)x, (int)y));
+                        drawing = false;
+                        isRecording = false;    //also stop listening for touches
+                        mOverlayView.unregisterCallback();
+                        mOverlayView.setCaptureEnabled(false);
+                        mRecordingButton.setText(R.string.drawCirle);
+
+                        float[] results = new float[1]; // because distanceBetween has weird requirements
+                        Location.distanceBetween(origin.latitude, origin.longitude, end.latitude, end.longitude, results); // it puts the result in results[0] because reasons
+                        //mGoogleMap.addMarker(new MarkerOptions().position(origin).title("Origin"));
+                        mGoogleMap.addMarker(new MarkerOptions().position(end).title("End"));
+                        Circle circle = mGoogleMap.addCircle(new CircleOptions().center(origin).radius(results[0]));
+
+                        // Bind the circles to Geofences!
+                        mGeofenceRequester.addGeofence(origin, results[0]);
+                    }
+                }
+
+                public void onTouchDown(double x, double y) {}
+                public void onTouchMove(double x, double y) {}
+
+                public void onTouchCancel() {
+                    mOverlayView.unregisterCallback();
+                    mOverlayView.setCaptureEnabled(false);
+                    isRecording = false;
+                    mRecordingButton.setText(R.string.drawCirle);
+                }
+            });
+        }
+        mOverlayView.setCaptureEnabled(isRecording);
+        mOverlayView.setEnabled(true);
+    }
+
+// TouchOverlayView.java
+
+package com.andrewdutcher.geotunes;
+
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.View;
+
+public class TouchOverlayView extends View {
+    private boolean mEnabled = false;
+    private TouchCallback mCallbacks = null;
+    private Integer currentTouch = null;
+
+    public TouchOverlayView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+    }
+
+    public void setCaptureEnabled(boolean enabled) {
+        mEnabled = enabled;
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        //super.onTouchEvent(event);
+        if (mCallbacks != null) {
+            if (currentTouch == null) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    currentTouch = event.getPointerId(0);
+                    mCallbacks.onTouchDown(event.getX(0), event.getY(0));
+                }
+            } else {
+                int pointerIndex = event.findPointerIndex(currentTouch);
+                if (pointerIndex != -1) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_MOVE:
+                            mCallbacks.onTouchMove(event.getX(pointerIndex), event.getY(pointerIndex));
+                            break;
+                        case MotionEvent.ACTION_UP:
+                            mCallbacks.onTouchUp(event.getX(pointerIndex), event.getY(pointerIndex));
+                            currentTouch = null;
+                            break;
+                        case MotionEvent.ACTION_CANCEL:
+                            mCallbacks.onTouchCancel();
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+        return mEnabled;
+
+    }
+
+    public void registerCallback(TouchCallback callbacks) {
+        this.mCallbacks = callbacks;
+    }
+
+    public void unregisterCallback() {
+        this.mCallbacks = null;
+        this.currentTouch = null;
+    }
+
+    /*@Override
+    public void onDraw(Canvas canvas) {
+        Paint dap = new Paint();
+        dap.setARGB(255,255,0,0);
+        canvas.drawRect(0,0,300,300,dap);
+    }*/
+
+    public static abstract class TouchCallback {
+        public abstract void onTouchDown(double x, double y);
+        public abstract void onTouchMove(double x, double y);
+        public abstract void onTouchUp(double x, double y);
+        public abstract void onTouchCancel();
+    }
+}
