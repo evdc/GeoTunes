@@ -4,6 +4,7 @@ import android.graphics.Point;
 import android.location.Location;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.text.method.Touch;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,11 +15,13 @@ import android.os.Bundle;
 import android.util.Log;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -60,7 +63,10 @@ public class MainActivity extends Activity implements
     private Button mRecordingButton;
     private TouchOverlayView mOverlayView;
 
-    private GeofenceRequester mGeofenceRequester;
+    //private GeofenceRequester mGeofenceRequester;
+    private AreaManager mAreaManager;
+    private int nextAreaId = 0;
+    private ArrayList<Integer> lastAreas;
 
     private boolean isRecording = false;
     private boolean hasIntializedCenter = false;
@@ -80,7 +86,9 @@ public class MainActivity extends Activity implements
 
         this.buildGoogleApiClient();
 
-        this.mGeofenceRequester = new GeofenceRequester(this, mGoogleApiClient);
+        //this.mGeofenceRequester = new GeofenceRequester(this, mGoogleApiClient);
+        this.mAreaManager = new AreaManager();
+        this.lastAreas = new ArrayList<Integer>();
 
         MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.mapFragment);
         mapFragment.getMapAsync(this);
@@ -231,6 +239,15 @@ public class MainActivity extends Activity implements
             mLatitudeText.setText(String.valueOf(mLastLocation.getLatitude()));
             mLongitudeText.setText(String.valueOf(mLastLocation.getLongitude()));
 
+            ArrayList<Integer> inAreas = mAreaManager.getMatchingAreas(new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude()));
+            ArrayList<AreaManager.Change> changes = mAreaManager.diffIds(lastAreas, inAreas);
+            lastAreas = inAreas;
+
+            if (changes.size() > 0) {
+                String a = TextUtils.join(", ", changes);
+                Toast.makeText(getApplicationContext(), a, Toast.LENGTH_LONG).show();
+            }
+
             /*if (mGoogleMap != null && isRecording) {
                 LatLng hereNow = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
                 //mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(hereNow));
@@ -292,7 +309,8 @@ public class MainActivity extends Activity implements
                         Circle circle = mGoogleMap.addCircle(new CircleOptions().center(origin).radius(results[0]));
 
                         // Bind the circles to Geofences!
-                        mGeofenceRequester.addGeofence(origin, results[0]);
+                        //mGeofenceRequester.addGeofence(origin, results[0]);
+                        mAreaManager.addArea(new AreaManager.Area(nextAreaId++, origin, results[0]));
                     }
                 }
 
