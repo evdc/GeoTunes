@@ -3,6 +3,7 @@ package com.andrewdutcher.geotunes;
 import android.location.Location;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.text.method.Touch;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.app.Activity;
@@ -55,8 +56,9 @@ public class MainActivity extends Activity implements
     private TextView mLongitudeText;
     private GoogleMap mGoogleMap = null;
     private Button mRecordingButton;
+    private TouchOverlayView mOverlayView;
 
-    private boolean isRecording = false;
+    private boolean isRecording = false;;
 
     @Override
     // Authenticate the user with Spotify.
@@ -66,11 +68,13 @@ public class MainActivity extends Activity implements
         this.mLatitudeText = (TextView) findViewById(R.id.latitudeText);
         this.mLongitudeText = (TextView) findViewById(R.id.longitudeText);
         this.mRecordingButton = (Button) findViewById(R.id.recordingButton);
+        this.mOverlayView = (TouchOverlayView) (findViewById(R.id.touchOverlay));
 
         this.buildGoogleApiClient();
 
         MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.mapFragment);
         mapFragment.getMapAsync(this);
+        //mapFragment.getView().setVisibility(View.INVISIBLE);
         //SpotifyAuthentication.openAuthWindow(CLIENT_ID, "token", REDIRECT_URI,
          //       new String[]{"user-read-private", "playlist-read-private", "streaming"}, null, this);
     }
@@ -217,13 +221,13 @@ public class MainActivity extends Activity implements
             mLatitudeText.setText(String.valueOf(mLastLocation.getLatitude()));
             mLongitudeText.setText(String.valueOf(mLastLocation.getLongitude()));
 
-            if (mGoogleMap != null && isRecording) {
+            /*if (mGoogleMap != null && isRecording) {
                 LatLng hereNow = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
                 //mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(hereNow));
                 mGoogleMap.addMarker(new MarkerOptions()
                         .title(String.valueOf(Calendar.getInstance().get(Calendar.SECOND)))
                         .position(hereNow));
-            }
+            }*/
         }
     }
 
@@ -236,13 +240,54 @@ public class MainActivity extends Activity implements
     public void recordingButtonClick(View view) {
         if (isRecording) {
             isRecording = false;
+            mRecordingButton.setText(R.string.drawCirle);
+            mOverlayView.unregisterCallback();
         } else {
             isRecording = true;
-            if (mGoogleMap != null && mLastLocation != null) {
+            mRecordingButton.setText(R.string.stopDrawing);
+            /*if (mGoogleMap != null && mLastLocation != null) {
                 mGoogleMap.clear();
                 LatLng hereNow = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
                 mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(hereNow, 19));
-            }
+            }*/
+            mOverlayView.registerCallback(new TouchOverlayView.TouchCallback() {
+                private double startx;
+                private double starty;
+                private double endx;
+                private double endy;
+                public void onTouchDown(double x, double y) {
+                    startx = x;
+                    starty = y;
+                }
+
+                public void onTouchMove(double x, double y) {
+                    endx = x;
+                    endy = y;
+                }
+
+                public void onTouchUp(double x, double y) {
+                    endx = x;
+                    endy = y;
+                    mOverlayView.unregisterCallback();
+                    mOverlayView.setCaptureEnabled(false);
+                    isRecording = false;
+                    mRecordingButton.setText(R.string.drawCirle);
+                    double dx = endx - startx;
+                    double dy = endy - starty;
+                    ((TextView) findViewById(R.id.textView)).setText("You dragged this many pixels: " + String.valueOf(Math.sqrt(dx*dx + dy*dy)));
+
+                    // TODO: Take this pixel value, use the map's projection property to find out the lat/long of it, and render it as a circle.
+                }
+
+                public void onTouchCancel() {
+                    mOverlayView.unregisterCallback();
+                    mOverlayView.setCaptureEnabled(false);
+                    isRecording = false;
+                    mRecordingButton.setText(R.string.drawCirle);
+                }
+            });
         }
+        mOverlayView.setCaptureEnabled(isRecording);
+        mOverlayView.setEnabled(true);
     }
 }
