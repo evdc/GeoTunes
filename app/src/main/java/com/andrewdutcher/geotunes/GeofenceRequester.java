@@ -59,6 +59,7 @@ public class GeofenceRequester implements ResultCallback<Status> {
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
                 .setCircularRegion(origin.latitude, origin.longitude, radius)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE).build();
+        requestNum++;
 
         // Then, make the GeofencingRequest
         GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()

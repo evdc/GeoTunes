@@ -48,9 +48,9 @@ public class MainActivity extends Activity implements
 
     private static final String CLIENT_ID = "54d4b45fd6604dd3952c0f0f3d0c5530";
     private static final String REDIRECT_URI = "geotunes-login://callback";
-    private Player mPlayer;
-    private SpotifyWebAPI spotifyWebAPI;
-    private List<Playlist> userPlaylists;
+    private static Player mPlayer;
+    private static SpotifyWebAPI spotifyWebAPI;
+    private static List<Playlist> userPlaylists;
 
     private GoogleApiClient mGoogleApiClient;
     private Location mLastLocation;
@@ -175,7 +175,7 @@ public class MainActivity extends Activity implements
 
     // Start playing a playlist by name.
     // Nested callbacks ensure that things execute in the correct order.
-    private void startPlaylist(final String name) {
+    public static void startPlaylist(final String name) {
         spotifyWebAPI.getUserPlaylists(new Callback<List<Playlist>>() {
             @Override
             public void success(List<Playlist> playlists, Response response) {
