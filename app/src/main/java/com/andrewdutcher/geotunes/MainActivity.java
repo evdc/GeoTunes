@@ -244,8 +244,13 @@ public class MainActivity extends Activity implements
             lastAreas = inAreas;
 
             if (changes.size() > 0) {
-                String a = TextUtils.join(", ", changes);
-                Toast.makeText(getApplicationContext(), a, Toast.LENGTH_LONG).show();
+                //String a = TextUtils.join(", ", changes);
+                //Toast.makeText(getApplicationContext(), a, Toast.LENGTH_LONG).show();
+                if (changes.get(0).changeType == AreaManager.Change.ChangeType.CHANGE_TYPE_ENTER) {
+                    startPlaylist("sexy");
+                } else {
+                    startPlaylist("Chilling");
+                }
             }
 
             /*if (mGoogleMap != null && isRecording) {
