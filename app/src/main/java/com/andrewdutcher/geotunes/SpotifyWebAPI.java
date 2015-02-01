@@ -78,7 +78,7 @@ public class SpotifyWebAPI {
     // Get a List of Spotify IDs (as strings) of the tracks of a given playlist.
     // Is it better to get these from the Playlist object, or make another spotify request?
     public List<String> getPlaylistTrackIDs(Playlist playlist) {
-            
+
         Log.d("SpotifyWebApi", "Getting Track IDs for Playlist: " + playlist.name);
         List<String> track_ids = new ArrayList<String>();
 
