@@ -1,4 +1,4 @@
-package com.andrewdutcher.geotunes;
+package com.evan.geotunes;
 
 import android.content.Context;
 import android.graphics.Canvas;

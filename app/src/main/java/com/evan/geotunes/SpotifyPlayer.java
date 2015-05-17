@@ -1,5 +1,4 @@
-package com.andrewdutcher.geotunes;
-
+package com.evan.geotunes;
 
 import android.app.Activity;
 import android.net.Uri;

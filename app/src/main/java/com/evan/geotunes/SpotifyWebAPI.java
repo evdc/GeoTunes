@@ -1,4 +1,4 @@
-package com.andrewdutcher.geotunes;
+package com.evan.geotunes;
 
 import android.util.Log;
 
@@ -40,7 +40,7 @@ public class SpotifyWebAPI {
                 spotify.getPlaylists(userID, new Callback<Pager<Playlist>>() {
                     @Override
                     public void success(Pager<Playlist> playlists, Response response) {
-                        Log.d("Get user playlists success", playlists.href);
+                        Log.d("Got user playlists", playlists.href);
                         callback.success(playlists.items, response);
                     }
 

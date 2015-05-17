@@ -3,9 +3,8 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 21
     buildToolsVersion "20.0.0"
-
     defaultConfig {
-        applicationId "com.andrewdutcher.geotunes"
+        applicationId 'com.evan.geotunes'
         minSdkVersion 15
         targetSdkVersion 21
         versionCode 1
@@ -17,10 +16,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    productFlavors {
+    }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.android.support:appcompat-v7:21.0.3'
     compile 'com.spotify.sdk:spotifysdk:1.0.0-beta7@aar'
     compile files('libs/spotify-web-api-android-all-0.1.0.jar')

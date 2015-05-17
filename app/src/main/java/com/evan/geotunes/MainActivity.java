@@ -1,31 +1,23 @@
-package com.andrewdutcher.geotunes;
+package com.evan.geotunes;
 
 import android.graphics.Point;
 import android.location.Location;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.text.TextUtils;
-import android.text.method.Touch;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Bundle;
 import android.util.Log;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.andrewdutcher.geotunes.R;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -63,7 +55,6 @@ public class MainActivity extends Activity implements
     private Button mRecordingButton;
     private TouchOverlayView mOverlayView;
 
-    //private GeofenceRequester mGeofenceRequester;
     private AreaManager mAreaManager;
     private int nextAreaId = 0;
     private ArrayList<Integer> lastAreas;
@@ -93,8 +84,6 @@ public class MainActivity extends Activity implements
         MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.mapFragment);
         mapFragment.getMapAsync(this);
         //mapFragment.getView().setVisibility(View.INVISIBLE);
-        //SpotifyAuthentication.openAuthWindow(CLIENT_ID, "token", REDIRECT_URI,
-        //       new String[]{"user-read-private", "playlist-read-private", "streaming"}, null, this);
     }
 
     protected synchronized void buildGoogleApiClient() {
@@ -333,5 +322,4 @@ public class MainActivity extends Activity implements
         mOverlayView.setCaptureEnabled(isRecording);
         mOverlayView.setEnabled(true);
     }
-
 }
